@@ -9,4 +9,7 @@ router.post('/add-to-plan', AuthMiddleware.checkBlacklist, exerciseController.ad
 // Get user's workout plan
 router.get('/workout-plan', AuthMiddleware.checkBlacklist, exerciseController.getUserWorkoutPlan);
 
-module.exports = router; 
+// Delete exercise (changed from POST to DELETE)
+router.delete('/exercise/:id', AuthMiddleware.checkBlacklist, exerciseController.deleteExercise);
+
+module.exports = router;

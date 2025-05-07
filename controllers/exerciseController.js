@@ -50,6 +50,46 @@ const exerciseController = {
             });
         }
     },
+    deleteExercise: async (req, res) => {
+        try {
+            const exerciseId = req.params.id;
+            const userId = req.user_id;
+
+            if (!userId) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'User not authenticated'
+                });
+            }
+
+            // Find and delete the exercise, ensuring it belongs to the current user
+            const deletedExercise = await UserExercise.findOneAndDelete({
+                _id: exerciseId,
+                user_id: userId
+            });
+
+            if (!deletedExercise) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Exercise not found or unauthorized'
+                });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: 'Exercise deleted successfully',
+                data: deletedExercise
+            });
+
+        } catch (error) {
+            console.error('Error in deleteExercise:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error deleting exercise',
+                error: error.message
+            });
+        }
+    },
 
     getUserWorkoutPlan: async (req, res) => {
         try {

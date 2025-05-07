@@ -17,7 +17,7 @@ class AuthController {
             }
 
             const { email, password } = req.body;
-                console.log('Đăng nhập với email:', email);
+                console.log('Logged in with email:', email);
             const user = await UserModel.findByEmail(email);
             if (!user) {
                 return res.status(401).json({ success: false, message: 'Invalid password or email' });

@@ -26,19 +26,22 @@ const exerciseController = {
                 user_id: req.user_id,
                 exercise_name,
                 exercise_sub_title,
-                date_to_do:new Date(date_to_do),
+                date_to_do: new Date(date_to_do),
                 set_to_do,
                 kcal_to_do,
                 time_to_do
             });
 
             // Save to database
-            await newExercise.save();
+            const savedExercise = await newExercise.save();
 
             res.status(201).json({
                 success: true,
                 message: 'Exercise added to workout plan successfully',
-                data: newExercise
+                data: {
+                    id: savedExercise._id,
+                    ...savedExercise._doc
+                }
             });
 
         } catch (error) {

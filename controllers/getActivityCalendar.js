@@ -64,6 +64,7 @@ class GetActivityCalendar {
                 totalWorkouts: exercises.length,
                 nextExercise: exercises[0].exercise_name,
                 exercises: exercises.map(exercise => ({
+                    id: exercise._id,
                     exercise_name: exercise.exercise_name,
                     exercise_sub_title: exercise.exercise_sub_title,
                     set_to_do: exercise.set_to_do,

@@ -1,6 +1,7 @@
 // controllers/userActivityController.js
 const { User, UserModel } = require('../models/userModel');
 const UserActivity = require('../models/userActivity');
+const ObjectId = require('mongoose').Types.ObjectId;
 
 // Debug: Log để kiểm tra User và UserModel
 console.log('User model:', User);
@@ -150,5 +151,85 @@ const getTodayActivity = async (req, res) => {
         });
     }
 }
+const get7daysActivity = async (req, res) => {
+    try {
+        const user_id = req.user.id;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-module.exports = { submitRunSession, getRunHistory, getTodayActivity };
+        const currentDay = new Date(today);
+        const startOfWeek = new Date(currentDay);
+        startOfWeek.setDate(currentDay.getDate() - currentDay.getDay() + 1);
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6); // Set to end of week (Sunday)
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        const userObjectId = new ObjectId(user_id);
+
+        const activities = await UserActivity.aggregate([
+            {
+            $match: {
+                user_id: userObjectId,
+                activity_date: {
+                $gte: startOfWeek,
+                $lt: new Date(endOfWeek.getTime() + 24 * 60 * 60 * 1000) // Include Sunday
+                }
+            }
+            },
+            {
+            $group: {
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$activity_date" } },
+                totalDistance: { $sum: "$distance_in_km" },
+                totalCalories: { $sum: "$calories" },
+                totalSteps: { $sum: "$steps" },
+                activities: { $push: "$$ROOT" }
+            }
+            },
+            {
+            $sort: { _id: 1 }
+            }
+        ]);
+
+        // Create array for all days of the week (Monday to Sunday)
+        const weekData = [];
+        for (let d = new Date(startOfWeek); d <= endOfWeek; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+            weekData.push({
+                date: dateStr,
+                totalDistance: 0,
+                totalCalories: 0,
+                totalSteps: 0,
+                activities: []
+            });
+        }
+
+        // Merge existing activities with empty days
+        activities.forEach(activity => {
+            const index = weekData.findIndex(day => day.date === activity._id);
+            if (index !== -1) {
+                weekData[index] = {
+                    date: activity._id,
+                    totalDistance: activity.totalDistance,
+                    totalCalories: activity.totalCalories,
+                    totalSteps: activity.totalSteps,
+                    activities: activity.activities
+                };
+            }
+        });
+
+        res.json({
+            success: true,
+            data: weekData
+        });
+    } catch (error) {
+        console.error('Error in get7daysActivity:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error in get7daysActivity'
+        });
+    }
+}
+
+module.exports = { submitRunSession, getRunHistory, getTodayActivity, get7daysActivity };

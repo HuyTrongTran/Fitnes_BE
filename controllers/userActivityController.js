@@ -1,6 +1,6 @@
 // controllers/userActivityController.js
 const { User, UserModel } = require('../models/userModel');
-const UserActivity = require('../models/userActivity');
+const UserActivity = require('../models/userActivityModel');
 const ObjectId = require('mongoose').Types.ObjectId;
 
 // Debug: Log để kiểm tra User và UserModel
@@ -17,7 +17,7 @@ const submitRunSession = async (req, res, next) => {
         // Lấy user_id từ token (được set bởi middleware checkBlacklist)
         const user_id = req.user.id;
 
-        const { time_in_seconds, distance_in_km, route_points, activity_date, steps, calories } = req.body;
+        const { run_address, time_in_seconds, distance_in_km, route_points, activity_date, steps, calories } = req.body;
 
         // Kiểm tra dữ liệu đầu vào
         if (!time_in_seconds || !distance_in_km) {
@@ -39,6 +39,7 @@ const submitRunSession = async (req, res, next) => {
         const newActivity = new UserActivity({
             user_id,
             activity_type: 'run',
+            run_address: run_address || 'Unknown',
             time_in_seconds,
             distance_in_km,
             activity_date: activity_date || new Date().toISOString().split('T')[0],
@@ -165,8 +166,7 @@ const get7daysActivity = async (req, res) => {
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6); // Set to end of week (Sunday)
         endOfWeek.setHours(23, 59, 59, 999);
-
-        const userObjectId = new ObjectId(user_id);
+        const userObjectId = new ObjectId(user_id); 
 
         const activities = await UserActivity.aggregate([
             {

@@ -12,6 +12,10 @@ const userActivitySchema = new mongoose.Schema({
         required: true,
         enum: ['run', 'walk', 'bike', 'swim'],
     },
+    run_address: {
+        type: String,
+        required: true,
+    },
     time_in_seconds: {
         type: Number,
         required: true,

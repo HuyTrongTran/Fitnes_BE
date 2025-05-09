@@ -39,7 +39,7 @@ const submitRunSession = async (req, res, next) => {
         const newActivity = new UserActivity({
             user_id,
             activity_type: 'run',
-            run_address: run_address || 'Unknown',
+            run_address: run_address,
             time_in_seconds,
             distance_in_km,
             activity_date: activity_date || new Date().toISOString().split('T')[0],

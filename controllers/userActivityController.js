@@ -94,6 +94,7 @@ const getRunHistory = async (req, res) => {
         const formattedActivities = activities.map(activity => ({
             id: activity._id,
             date: activity.activity_date,
+            run_address: activity.run_address,
             time_in_seconds: activity.time_in_seconds,
             distance_in_km: activity.distance_in_km,
             calories: activity.calories,
@@ -139,9 +140,21 @@ const getTodayActivity = async (req, res) => {
             };
         }, { distance_in_km: 0, calories: 0, steps: 0 });
 
+        // Farse data
+        const formattedActivities = activities.map(activity => ({
+            id: activity._id,
+            date: activity.activity_date || null,
+            run_address: activity.run_address || null,
+            time_in_seconds: activity.time_in_seconds|| null,
+            distance_in_km: activity.distance_in_km || null,
+            calories: activity.calories|| null,
+            steps: activity.steps|| null,
+            route_points: activity.route_points || []
+        }));
+
         res.json({
             success: true,
-            data: activities,
+            data: formattedActivities,
             totals: totals
         });
     } catch (error) {
@@ -232,4 +245,78 @@ const get7daysActivity = async (req, res) => {
     }
 }
 
-module.exports = { submitRunSession, getRunHistory, getTodayActivity, get7daysActivity };
+    const getSelectdayActivity = async (req, res) => {
+        try {
+            const user_id = req.user.id;
+            const dateParam = req.params.date; // Changed from req.query to req.params
+
+            // Validate date format (YYYY-MM-DD)
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+            if (!dateRegex.test(dateParam)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid date format. Please use YYYY-MM-DD format (e.g., 2025-05-11)'
+                });
+            }
+
+            const selectedDate = new Date(dateParam);
+            
+            if (isNaN(selectedDate.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid date'
+                });
+            }
+
+            // Set the time to start of the selected day (UTC)
+            selectedDate.setUTCHours(0, 0, 0, 0);
+            
+            // Find all activities for the selected date
+            const activities = await UserActivity.find({
+                user_id: user_id,
+                activity_date: {
+                    $gte: selectedDate,
+                    $lt: new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000)
+                }
+            });
+            
+            // Calculate totals
+            const totals = activities.reduce((acc, activity) => {
+                return {
+                    distance_in_km: Number((acc.distance_in_km + (activity.distance_in_km || 0)).toFixed(2)),
+                    calories: Math.round(acc.calories + (activity.calories || 0)),
+                    steps: Math.round(acc.steps + (activity.steps || 0))
+                };
+            }, { distance_in_km: 0, calories: 0, steps: 0 });
+
+            // Format activities
+            const formattedActivities = activities.map(activity => ({
+                id: activity._id,
+                date: activity.activity_date,
+                run_address: activity.run_address || null,
+                time_in_seconds: activity.time_in_seconds || 0,
+                distance_in_km: activity.distance_in_km || 0,
+                calories: activity.calories || 0,
+                steps: activity.steps || 0,
+                route_points: activity.route_points || []
+            }));
+
+            res.json({
+                success: true,
+                data: {
+                    activities: formattedActivities,
+                    totals: totals,
+                    // selectedDate: dateParam
+                }
+            });
+        } catch (error) {
+            console.error('Error in getSelectdayActivity:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Internal server error',
+                error: error.message
+            });
+        }
+    };
+
+module.exports = { submitRunSession, getRunHistory, getTodayActivity, get7daysActivity, getSelectdayActivity };

@@ -11,6 +11,7 @@ const activityRoutes = require('./routes/activityRoutes');
 const exerciseRoutes = require('./routes/exerciseRoutes');
 const userRoutes = require('./routes/userRoutes');
 const suggestFoodRoutes = require('./routes/suggestFoodRoutes');
+const fitbotRoutes = require('./routes/fitbotRoutes');
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use('/api', authRoutes);
 app.use('/api', activityRoutes);
 app.use('/api', exerciseRoutes);
 app.use('/api', suggestFoodRoutes);
+app.use('/api', fitbotRoutes);
 
 // Route bảo vệ sử dụng checkBlacklist
 app.get('/api/protected', AuthController.checkBlacklist, (req, res) => {

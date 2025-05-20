@@ -33,11 +33,13 @@ const fitbotController = {
             let savedLog;
 
             if (existingLog) {
-                // Create new conversation
+                // Create new conversation with formatted timestamp for GMT+7
                 const newConversation = {
                     question,
                     response,
-                    timestamp: new Date()
+                    timestamp: new Date().toLocaleString('en-US', { 
+                        timeZone: 'Asia/Bangkok' // GMT+7 timezone (Indochina Time)
+                    })
                 };
 
                 // Initialize log_data as array if it doesn't exist
@@ -72,7 +74,9 @@ const fitbotController = {
                     log_data: [{
                         question,
                         response,
-                        timestamp: new Date()
+                        timestamp: new Date().toLocaleString('en-US', { 
+                            timeZone: 'Asia/Bangkok' // GMT+7 timezone (Indochina Time)
+                        })
                     }],
                     created_date: new Date()
                 });

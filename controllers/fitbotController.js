@@ -11,7 +11,7 @@ const fitbotController = {
             if (!user_id || !question || !response) {
                 return res.status(400).json({
                     success: false,
-                    message: 'User ID, question and response are required'
+                    message: 'Missing required fields: user_id, question, or response'
                 });
             }
 
@@ -100,10 +100,21 @@ const fitbotController = {
         try {
             const user_id = req.user_id; // Get from authenticated user
             const userLogs = await FitbotLog.find({ user_id }).sort({ created_date: -1 });
+
+            // return latest question
+            const latestLogs = userLogs.length > 0 ? {
+                log_id: userLogs[0].log_id,
+                created_date: userLogs[0].created_date,
+                latest_question: userLogs[0].log_data[userLogs[0].log_data.length - 1]?.question || null,
+                latest_response: userLogs[0].log_data[userLogs[0].log_data.length - 1]?.response || null
+            } : null;
+            
             
             res.status(200).json({
                 success: true,
-                data: userLogs
+                data: userLogs,
+                latestQuestion: latestLogs.latest_question,
+                latestResponse: latestLogs.latest_response  
             });
         } catch (error) {
             res.status(500).json({

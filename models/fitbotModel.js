@@ -13,11 +13,11 @@ const chatLogSchema = new mongoose.Schema({
     log_data: [{
         question: {
             type: String,
-            required: true,
+            required: false,
         },
         response: {
             type: String,
-            required: true,
+            required: false,
         },
         timestamp: {
             type: Date,

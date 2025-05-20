@@ -108,11 +108,14 @@ const fitbotController = {
                 latest_question: userLogs[0].log_data[userLogs[0].log_data.length - 1]?.question || null,
                 latest_response: userLogs[0].log_data[userLogs[0].log_data.length - 1]?.response || null
             } : null;
+
+            latestConversation = userLogs.length > 0 ? userLogs[0].log_data : null;
             
             
             res.status(200).json({
                 success: true,
                 data: userLogs,
+                latestConversation: latestConversation,
                 latestQuestion: latestLogs.latest_question,
                 latestResponse: latestLogs.latest_response  
             });
@@ -125,23 +128,15 @@ const fitbotController = {
         }
     },
 
-    getUserlogsByDate: async (req, res) => {
+    getTodayLogs: async (req, res) => {
         try {
             const user_id = req.user_id; // Get from authenticated user
-            const { date } = req.params;
-
-            // Validate date format (YYYY-MM-DD)
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid date format. Use YYYY-MM-DD.'
-                });
-            }
-
-            // Parse date and get start and end of the day
-            const startOfDay = new Date(date);
+            
+            // Get today's date in UTC
+            const today = new Date();
+            const startOfDay = new Date(today);
             startOfDay.setUTCHours(0, 0, 0, 0);
-            const endOfDay = new Date(date);
+            const endOfDay = new Date(today);
             endOfDay.setUTCHours(23, 59, 59, 999);
 
             const userLogs = await FitbotLog.find({
@@ -152,14 +147,21 @@ const fitbotController = {
                 }
             }).sort({ created_date: -1 });
 
+            // If logs exist for today, get the conversations
+            let todayConversations = null;
+            if (userLogs.length > 0) {
+                todayConversations = userLogs[0].log_data;
+            }
+
             res.status(200).json({
                 success: true,
-                data: userLogs
+                data: userLogs,
+                todayConversations: todayConversations
             });
         } catch (error) {
             res.status(500).json({
                 success: false,
-                message: 'Error fetching user logs by date',
+                message: 'Error fetching today\'s logs',
                 error: error.message
             });
         }

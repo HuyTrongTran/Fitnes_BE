@@ -6,6 +6,6 @@ const { AuthMiddleware } = require('../middleware/authMiddleware');
 // Create new chat log
 router.post('/writeLog', AuthMiddleware.checkBlacklist, fitbotController.createLog);
 router.get('/getLogs', AuthMiddleware.checkBlacklist, fitbotController.getUserLogs);
-router.get('/getLogs/:date', AuthMiddleware.checkBlacklist, fitbotController.getUserlogsByDate);
+router.get('/getTodayLogs', AuthMiddleware.checkBlacklist, fitbotController.getTodayLogs);
 
 module.exports = router;

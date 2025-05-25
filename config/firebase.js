@@ -1,31 +1,19 @@
 const admin = require('firebase-admin');
 
+// Use environment variables instead of file
 const getServiceAccount = () => {
-  if (
-    process.env.FIREBASE_PROJECT_ID &&
-    process.env.FIREBASE_CLIENT_EMAIL &&
-    process.env.FIREBASE_PRIVATE_KEY
-  ) {
-    console.log('Using Firebase credentials from environment variables');
-    return {
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    };
-  }
-  
-  try {
-    console.log('Attempting to load Firebase credentials from serviceAccountKey.json');
-    return require('./serviceAccountKey.json');
-  } catch (error) {
-    console.warn('Firebase credentials file not found, using mock implementation');
-    // Return mock credentials that won't cause initialization to fail
-    return {
-      projectId: 'mock-project-id',
-      clientEmail: 'mock@example.com',
-      privateKey: '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKj\nMzEfYyjiWA4R4/M2bS1GB4t7NXp98C3SC6dVMvDuictGeurT8jNbvJZHtCSuYEvu\n-----END PRIVATE KEY-----\n'
-    };
-  }
+  return {
+    type: "service_account",
+    project_id: process.env.FIREBASE_PROJECT_ID,
+    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+    private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    client_email: process.env.FIREBASE_CLIENT_EMAIL,
+    client_id: process.env.FIREBASE_CLIENT_ID,
+    auth_uri: process.env.FIREBASE_AUTH_URI,
+    token_uri: process.env.FIREBASE_TOKEN_URI,
+    auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
+    client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL
+  };
 };
 
 // Create a mock admin object that can be used when real admin fails

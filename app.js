@@ -5,13 +5,34 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const errorHandler = require('./middleware/errorHandler');
-const AuthController = require('./controllers/authController'); // Import AuthController
+const AuthController = require('./controllers/authController');
 const config = require('./config/config');
 const activityRoutes = require('./routes/activityRoutes');
 const exerciseRoutes = require('./routes/exerciseRoutes');
 const userRoutes = require('./routes/userRoutes');
 const suggestFoodRoutes = require('./routes/suggestFoodRoutes');
 const fitbotRoutes = require('./routes/fitbotRoutes');
+
+// Import Firebase with fallback to mock if needed
+let firebase;
+try {
+  firebase = require('./config/firebase');
+  if (firebase.isMock) {
+    console.log('Using mock Firebase implementation in app.js');
+  } else {
+    console.log('Using real Firebase implementation in app.js');
+  }
+} catch (error) {
+  console.error('Failed to load Firebase module:', error.message);
+  firebase = {
+    admin: {
+      auth: () => ({
+        verifyIdToken: () => Promise.resolve({ uid: 'app-mock-uid' })
+      })
+    },
+    isMock: true
+  };
+}
 
 const app = express();
 
@@ -25,6 +46,9 @@ mongoose.connect(config.MONGODB_URI, {
 })
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err.message));
+
+// Make Firebase accessible throughout the app
+app.locals.firebase = firebase;
 
 // Middleware
 app.use('/uploads', express.static('uploads'));

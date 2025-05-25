@@ -26,6 +26,12 @@ const userSchema = new mongoose.Schema({
         ],
     },
     hasCompletedOnboarding: { type: Boolean, default: false },
+    isVerified: {
+        type: Boolean,
+        default: false
+    },
+    verificationToken: String,
+    verificationTokenExpires: Date
 }, { collection: 'user_infor' });
 
 userSchema.pre('save', async function (next) {
@@ -40,8 +46,32 @@ const User = mongoose.model('User', userSchema);
 
 class UserModel {
     static async createUser(userData) {
-        const user = new User(userData);
-        return await user.save();
+        try {
+            // Ensure all required fields are present
+            const requiredFields = ['email', 'firstName', 'lastName', 'userName', 'password'];
+            for (const field of requiredFields) {
+                if (!userData[field]) {
+                    throw new Error(`Field '${field}' is required`);
+                }
+            }
+
+            // Create a new User instance (NOT using 'this')
+            const newUser = new User({
+                ...userData
+            });
+            
+            // Only hash password if not already hashed and not handled by pre-save hook
+            if (userData.password && !userData.password.startsWith('$2a$') && !userSchema.pre) {
+                newUser.password = await bcrypt.hash(userData.password, 10);
+            }
+            
+            // Save and return the user
+            await newUser.save();
+            return newUser;
+        } catch (error) {
+            console.error('Error creating user:', error);
+            throw error;
+        }
     }
 
     static async findByEmail(email) {

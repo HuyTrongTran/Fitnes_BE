@@ -12,7 +12,7 @@ class EmailService {
   }
 
   async sendVerificationEmail(email, token) {
-    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/api/verify-email/${token}`;
+    const verificationUrl = `${process.env.FRONTEND_URL || 'https://fitnes-be.onrender.com'}/api/verify-email/${token}`;
     
     const mailOptions = {
       from: process.env.EMAIL_FROM,

@@ -67,13 +67,13 @@ class AuthController {
       const { firstName, lastName, userName, email, password } = req.body;
       console.log("Đăng ký với email:", email);
 
-      // // Kiểm tra email đã tồn tại chưa
-      // const existingEmail = await UserModel.findByEmail(email);
-      // if (existingEmail) {
-      //   return res
-      //     .status(400)
-      //     .json({ success: false, message: "Email already exists" });
-      // }
+      // Kiểm tra email đã tồn tại chưa
+      const existingEmail = await UserModel.findByEmail(email);
+      if (existingEmail) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Email already exists" });
+      }
 
       // Kiểm tra userName đã tồn tại chưa
       const existingUserName = await UserModel.findByUserName(userName);

@@ -20,7 +20,7 @@ class EmailService {
       subject: 'Verify Your Fitness Tracker Account',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #4a4a4a;">Welcome to Fitness Tracker!</h2>
+          <h2 style="color: #4a4a4a;">Welcome to Fitness Tracking!</h2>
           <p>Thank you for registering. Please verify your email address by clicking the button below:</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${verificationUrl}" style="background-color: #4CAF50; color: white; padding: 15px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">

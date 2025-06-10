@@ -3,7 +3,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { UserModel } = require("../models/userModel");
 const config = require("../config/config");
-const { bucket } = require("../config/firebase");
+const { admin, bucket } = require("../config/firebase"); // Use your Firebase config
 const bcrypt = require('bcryptjs');
 const { BlacklistToken } = require("../models/blacklistToken");
 
@@ -147,62 +147,104 @@ class UserProfile {
       // Kiểm tra định dạng file
       const allowedMimes = ['image/jpeg', 'image/png', 'image/jpg'];
       if (!allowedMimes.includes(file.mimetype)) {
+        // Xóa file không hợp lệ
+        await fs.unlink(file.path);
         return res.status(400).json({
           success: false,
           message: "Invalid file format. Only JPG, JPEG and PNG are allowed"
         });
       }
 
-      // Đọc file từ disk
-      const fileContent = await fs.readFile(file.path);
-
       // Tạo tên file unique
       const fileExtension = file.originalname.split(".").pop().toLowerCase();
-      const fileName = `${Date.now()}.${fileExtension}`;
-      const filePath = `profile_images/${fileName}`;
+      const fileName = `profile_${req.user.email.replace(/[@.]/g, '_')}_${Date.now()}.${fileExtension}`;
+      
+      let publicUrl;
+      let uploadSuccess = false;
 
-      // Tạo reference đến file trong Firebase Storage
-      const fileUpload = bucket.file(filePath);
+      // Try Firebase upload first
+      try {
+        const { bucket, isMock } = require("../config/firebase");
+        
+        if (!isMock && bucket && bucket.file) {
+          console.log("Attempting Firebase Storage upload...");
+          
+          const fileContent = await fs.readFile(file.path);
+          const filePath = `profile_images/${fileName}`;
+          const fileUpload = bucket.file(filePath);
 
-      // Debug bucket name và file info
-      console.log("Using bucket:", bucket.name);
-      console.log("File path:", filePath);
+          await fileUpload.save(fileContent, {
+            metadata: {
+              contentType: file.mimetype,
+              metadata: {
+                uploadedBy: req.user.email,
+                uploadedAt: new Date().toISOString()
+              }
+            },
+            public: true,
+            resumable: false,
+          });
 
-      // Upload file lên Firebase Storage
-      await fileUpload.save(fileContent, {
-        metadata: {
-          contentType: file.mimetype,
-        },
-        public: true,
-        resumable: false,
-      });
+          await fileUpload.makePublic();
+          publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
+          uploadSuccess = true;
+          console.log("Firebase upload successful:", publicUrl);
+        } else {
+          throw new Error("Firebase Storage not available");
+        }
+      } catch (firebaseError) {
+        console.log("Firebase upload failed:", firebaseError.message);
+        console.log("Falling back to local file storage...");
+        
+        // Fallback: Move file to public uploads directory
+        const uploadsDir = path.join(__dirname, '../public/uploads/profile_images');
+        
+        // Create directory if it doesn't exist
+        await fs.mkdir(uploadsDir, { recursive: true });
+        
+        const newFilePath = path.join(uploadsDir, fileName);
+        await fs.rename(file.path, newFilePath);
+        
+        // Create public URL for local file
+        publicUrl = `${req.protocol}://${req.get('host')}/uploads/profile_images/${fileName}`;
+        uploadSuccess = true;
+        console.log("Local upload successful:", publicUrl);
+      }
 
-      // Xóa file tạm sau khi upload
-      await fs.unlink(file.path);
+      // If neither upload method worked
+      if (!uploadSuccess) {
+        await fs.unlink(file.path);
+        throw new Error("Failed to upload file to any storage system");
+      }
 
-      // Lấy public URL
-      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${filePath}`;
-      console.log("File uploaded successfully");
-      console.log("Public URL:", publicUrl);
+      // Delete temp file if it still exists (Firebase case)
+      try {
+        await fs.unlink(file.path);
+      } catch (unlinkError) {
+        // File might already be moved, ignore error
+      }
 
-      // Cập nhật URL vào database
+      // Cập nhật URL vào MongoDB
       const user = await UserModel.updateProfile(req.user.email, {
         profileImage: publicUrl,
       });
 
       if (!user) {
-        throw new Error("User not found");
+        throw new Error("User not found - could not update profile in database");
       }
+
+      console.log("Profile image URL saved to MongoDB successfully");
 
       return res.status(200).json({
         success: true,
         data: {
           profileImage: publicUrl,
         },
-        message: "Profile image uploaded successfully",
+        message: "Profile image uploaded and saved successfully"
       });
     } catch (error) {
       console.error("Error in uploadProfileImage:", error);
+      
       // Xóa file tạm nếu có lỗi
       if (req.file && req.file.path) {
         try {
@@ -211,10 +253,11 @@ class UserProfile {
           console.error("Error deleting temp file:", unlinkError);
         }
       }
+      
       if (!res.headersSent) {
         return res.status(500).json({
           success: false,
-          message: error.message || "Internal server error",
+          message: error.message || "Failed to upload profile image",
         });
       }
     }

@@ -1,20 +1,35 @@
 const admin = require('firebase-admin');
+const path = require('path');
+const fs = require('fs');
 
-// Use environment variables instead of file
-const getServiceAccount = () => {
-  return {
-    type: "service_account",
-    project_id: process.env.FIREBASE_PROJECT_ID,
-    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-    private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    client_email: process.env.FIREBASE_CLIENT_EMAIL,
-    client_id: process.env.FIREBASE_CLIENT_ID,
-    auth_uri: process.env.FIREBASE_AUTH_URI,
-    token_uri: process.env.FIREBASE_TOKEN_URI,
-    auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
-    client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL
-  };
-};
+// Validate and load service account JSON file
+let serviceAccount;
+try {
+  const serviceAccountPath = path.join(__dirname, 'serviceAccountKey.json');
+  
+  // Check if file exists
+  if (!fs.existsSync(serviceAccountPath)) {
+    throw new Error('Service account file not found at: ' + serviceAccountPath);
+  }
+  
+  serviceAccount = require('./serviceAccountKey.json');
+  
+  // Validate required fields
+  const requiredFields = ['type', 'project_id', 'private_key_id', 'private_key', 'client_email', 'client_id'];
+  for (const field of requiredFields) {
+    if (!serviceAccount[field]) {
+      throw new Error(`Missing required field in service account: ${field}`);
+    }
+  }
+  
+  console.log('Service account file loaded successfully');
+  console.log('Project ID:', serviceAccount.project_id);
+  console.log('Client Email:', serviceAccount.client_email);
+  
+} catch (error) {
+  console.error('Error loading service account:', error.message);
+  serviceAccount = null;
+}
 
 // Create a mock admin object that can be used when real admin fails
 let mockAdmin = {
@@ -39,13 +54,28 @@ let mockAdmin = {
 let firebaseAdmin, bucket;
 
 try {
-  // Try to initialize the real Firebase admin
-  firebaseAdmin = admin.initializeApp({
-    credential: admin.credential.cert(getServiceAccount()),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'fitness-tracking-ccf2a.firebasestorage.app',
-  });
-  bucket = admin.storage().bucket();
-  console.log('Firebase Admin SDK initialized successfully');
+  if (!serviceAccount) {
+    throw new Error('Service account is not available');
+  }
+  
+  // Check if Firebase app is already initialized
+  if (admin.apps.length > 0) {
+    firebaseAdmin = admin.app();
+    console.log('Using existing Firebase app');
+  } else {
+    // Try to initialize the real Firebase admin using JSON file
+    firebaseAdmin = admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      storageBucket: 'fitness-tracking-ccf2a.firebasestorage.app',
+    });
+    console.log('Firebase Admin SDK initialized successfully with service account file');
+  }
+  
+  // Get the storage bucket after successful initialization
+  const storage = admin.storage();
+  bucket = storage.bucket();
+  console.log('Storage bucket name:', bucket.name);
+  
 } catch (error) {
   console.error('Failed to initialize Firebase Admin SDK:', error.message);
   console.log('Using mock Firebase implementation instead');
@@ -57,6 +87,9 @@ try {
 
 const checkStorageConnection = async () => {
   try {
+    if (!bucket) {
+      throw new Error('Bucket is not initialized');
+    }
     console.log('Checking Firebase Storage connection to bucket:', bucket.name);
     const [files] = await bucket.getFiles({ maxResults: 1 });
     console.log('Firebase Storage connected successfully');
@@ -71,5 +104,7 @@ module.exports = {
   admin: firebaseAdmin, 
   bucket, 
   checkStorageConnection,
-  isMock: firebaseAdmin === mockAdmin
+  isMock: firebaseAdmin === mockAdmin,
+  // Export storage as well for direct access
+  storage: firebaseAdmin === mockAdmin ? mockAdmin.storage() : admin.storage()
 };

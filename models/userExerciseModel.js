@@ -29,6 +29,7 @@ const userExerciseSchema = new mongoose.Schema({
     time_to_do: {
         type: Number,
         required: true,
-    }
+    },
+    
 });
 module.exports = mongoose.model('UserExercise', userExerciseSchema);
